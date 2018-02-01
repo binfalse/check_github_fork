@@ -1,0 +1,122 @@
+#!/bin/bash
+# This file is part of check_github_fork - Check status of github forks
+# Copyright (C) 2018 Martin Scharm <https://binfalse.de/contact/>
+# 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+site=
+ahead=true
+behind=true
+help=false
+bad_status=1
+
+for i in "$@"
+do
+    case $i in
+        --only-ahead)
+            ahead=true
+            behind=false
+            ;;
+        --only-behind)
+            ahead=false
+            behind=true
+            ;;
+        --critical)
+            bad_status=2
+            ;;
+        --help|-h)
+            help=true
+            ;;
+        *)
+            site=$i
+    esac
+done
+
+
+if [ -z "$site" ]
+then
+    echo "Need a url..."
+    help=true
+fi
+
+
+if [ "$help" = "true" ]
+then
+    echo "
+
+check_github_fork -- check if a fork on GitHub is up-to-date with its origin
+
+
+USAGE: check_github_fork [-h|--help] [--only-ahead] [--only-behind] [--critical] URL
+
+        --only-ahead    only check if the fork is ahead of its origin
+        --only-behind   only check if the fork is behind the origin
+        --critical      return status CRITICAL instead of WARNING if ahead/behind
+        -h|--help       show this help page
+"
+    exit 1
+fi
+
+
+
+# let's go!
+
+status=0
+response=
+response_supp=
+
+
+if [ "$behind" = "true" ]
+then
+    # check behind
+    found=$(curl -is "$site" | grep "This branch is .* behind")
+    if [ $? -eq 0 ]
+    then
+        status=$bad_status
+        response="the fork is behind"
+    fi
+fi
+
+
+if [ "$ahead" = "true" ]
+then
+    # check ahead
+    found=$(curl -is "$site" | grep "This branch is .* ahead")
+    if [ $? -eq 0 ]
+    then
+        status=$bad_status
+        [ -n "$response" ] && response="and $response"
+        response="the fork is ahead $response"
+    fi
+fi
+
+
+
+if [ -n "$found" ]
+then
+    response_supp=$(echo "$found" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+fi
+
+if [ -z "$response" ]
+then
+    response="the fork is up-to-date with origin"
+fi
+
+
+echo "$response|$response_supp"
+exit $status
+
+
+
