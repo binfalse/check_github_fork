@@ -1,4 +1,4 @@
-# check_gituhb_fork -- check if a fork on GitHub is up-to-date with its origin
+# Monitor the status of a fork on GitHub (and similar)
 
 This script can be used to monitor forks on Github (and similar repository hosters).
 You will automatically get notified if your for is ahead or behind its origin.
